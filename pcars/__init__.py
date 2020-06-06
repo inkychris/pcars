@@ -1,11 +1,11 @@
-import pcars.sms.udp as sms_udp
+import pcars.definitions.udp as udp_defs
 import socket
 
 
 class udp_socket:
     def __init__(self):
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-        self._socket.bind(('', sms_udp.PORT))
+        self._socket.bind(('', udp_defs.PORT))
 
     def __enter__(self):
         return self
@@ -14,7 +14,7 @@ class udp_socket:
         self._socket.close()
 
     def receive(self):
-        return self._socket.recvfrom(sms_udp.MAX_PACKET_SIZE)[0]
+        return self._socket.recvfrom(udp_defs.MAX_PACKET_SIZE)[0]
 
 
 class Telemetry:
@@ -27,9 +27,9 @@ class Telemetry:
             raise ValueError(f'invalid packet version {version}, expected {struct.VERSION}')
 
     def update_from_udp(self, udp_packet):
-        base_packet = sms_udp.PacketBase.from_buffer_copy(udp_packet)
-        if base_packet.packet_type == sms_udp.TelemetryData.PACKET_TYPE:
-            self._assert_packet_version(sms_udp.TelemetryData, base_packet.packet_version)
+        base_packet = udp_defs.PacketBase.from_buffer_copy(udp_packet)
+        if base_packet.packet_type == udp_defs.TelemetryData.PACKET_TYPE:
+            self._assert_packet_version(udp_defs.TelemetryData, base_packet.packet_version)
             self._vehicle_data.update_from_udp(udp_packet)
 
     @property
@@ -69,7 +69,7 @@ class _BaseData:
 
 
 class _VehicleData(_BaseData):
-    _udp_struct = sms_udp.TelemetryData
+    _udp_struct = udp_defs.TelemetryData
 
     @property
     def speed(self):
