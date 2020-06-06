@@ -46,7 +46,6 @@ _packet_base = ('packet_base', PacketBase)
 
 class TelemetryData(PackedStructure):
     PACKET_TYPE = 0
-    VERSION = 4
 
     _fields_ = [
         _packet_base,
@@ -123,7 +122,6 @@ class TelemetryData(PackedStructure):
 
 class RaceData(PackedStructure):
     PACKET_TYPE = 1
-    VERSION = 1
 
     _fields_ = [
         _packet_base,
@@ -147,20 +145,17 @@ class RaceData(PackedStructure):
 
 class ParticipantsData(PackedStructure):
     PACKET_TYPE = 2
-    VERSION = 2
 
     _fields_ = [
         _packet_base,
         ('participants_changed_timestamp', ctypes.c_uint),
         ('name', (ctypes.c_char * PARTICIPANT_NAME_LENGTH_MAX) * PARTICIPANTS_PER_PACKET),
         ('nationality', ctypes.c_uint * PARTICIPANTS_PER_PACKET),
-        ('participants_changed_timestamp', ctypes.c_ushort * PARTICIPANTS_PER_PACKET),
+        ('index', ctypes.c_ushort * PARTICIPANTS_PER_PACKET),
     ]
 
 
 class ParticipantsInfo(PackedStructure):
-    VERSION = 3
-
     _fields_ = [
         ('world_position', ctypes.c_short * 3),
         ('orientation', ctypes.c_short * 3),
@@ -181,7 +176,6 @@ class ParticipantsInfo(PackedStructure):
 
 class TimingsData(PackedStructure):
     PACKET_TYPE = 3
-    VERSION = 2
 
     _fields_ = [
         _packet_base,
@@ -191,7 +185,7 @@ class TimingsData(PackedStructure):
         ('split_time_ahead', ctypes.c_float),
         ('split_time_behind', ctypes.c_float),
         ('split_time', ctypes.c_float),
-        ('partcipants', ParticipantsInfo * STREAMER_PARTICIPANTS_SUPPORTED),
+        ('participants', ParticipantsInfo * STREAMER_PARTICIPANTS_SUPPORTED),
         ('local_participant_index', ctypes.c_ushort),
         ('tick_count', ctypes.c_uint),
     ]
@@ -199,7 +193,6 @@ class TimingsData(PackedStructure):
 
 class GameStateData(PackedStructure):
     PACKET_TYPE = 4
-    VERSION = 2
 
     _fields_ = [
         _packet_base,
@@ -211,13 +204,11 @@ class GameStateData(PackedStructure):
         ('snow_density', ctypes.c_ubyte),
         ('wind_speed', ctypes.c_char),
         ('wind_direction_x', ctypes.c_char),
-        ('wind_direction_y;', ctypes.c_char),
+        ('wind_direction_y', ctypes.c_char),
     ]
 
 
 class ParticipantStatsInfo(PackedStructure):
-    VERSION = 2
-
     _fields_ = [
         ('fastest_lap_time', ctypes.c_float),
         ('last_lap_time', ctypes.c_float),
@@ -231,8 +222,6 @@ class ParticipantStatsInfo(PackedStructure):
 
 
 class ParticipantsStats(PackedStructure):
-    VERSION = 2
-
     _fields_ = [
         ('participants', ParticipantStatsInfo * STREAMER_PARTICIPANTS_SUPPORTED),
     ]
@@ -240,7 +229,6 @@ class ParticipantsStats(PackedStructure):
 
 class TimeStatsData(PackedStructure):
     PACKET_TYPE = 7
-    VERSION = 2
 
     _fields_ = [
         _packet_base,
@@ -250,8 +238,6 @@ class TimeStatsData(PackedStructure):
 
 
 class VehicleInfo(PackedStructure):
-    VERSION = 2
-
     _fields_ = [
         ('index', ctypes.c_ushort),
         ('class', ctypes.c_uint),
@@ -260,7 +246,7 @@ class VehicleInfo(PackedStructure):
 
 
 class ParticipantVehicleNamesData(PackedStructure):
-    VERSION = 2
+    PACKET_TYPE = 8
 
     _fields_ = [
         _packet_base,
@@ -269,8 +255,6 @@ class ParticipantVehicleNamesData(PackedStructure):
 
 
 class ClassInfo(PackedStructure):
-    VERSION = 2
-
     _fields_ = [
         ('class_index', ctypes.c_uint),
         ('name', ctypes.c_char * CLASS_NAME_LENGTH_MAX),
@@ -278,8 +262,6 @@ class ClassInfo(PackedStructure):
 
 
 class VehicleClassNamesData(PackedStructure):
-    VERSION = 2
-
     _fields_ = [
         _packet_base,
         ('classes', ClassInfo * CLASSES_SUPPORTED_PER_PACKET),

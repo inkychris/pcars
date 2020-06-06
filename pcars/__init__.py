@@ -17,9 +17,29 @@ class udp_socket:
         return self._socket.recvfrom(udp_defs.MAX_PACKET_SIZE)[0]
 
 
+class PacketTypeError(Exception):
+    pass
+
+
 class Telemetry:
     def __init__(self):
         self._vehicle_data = _VehicleData()
+        self._race_data = _RaceData()
+        self._participants_data = _ParticipantsData()
+        self._timings_data = _TimingsData()
+        self._game_state_data = _GameStateData()
+        self._time_stats_data = _TimeStatsData()
+        self._participants_vehicle_names_data = _ParticipantVehicleNamesData()
+
+        self._data = (
+            self._vehicle_data,
+            self._race_data,
+            self._participants_data,
+            self._timings_data,
+            self._game_state_data,
+            self._time_stats_data,
+            self._participants_vehicle_names_data
+        )
 
     @staticmethod
     def _assert_packet_version(struct, version):
@@ -27,10 +47,16 @@ class Telemetry:
             raise ValueError(f'invalid packet version {version}, expected {struct.VERSION}')
 
     def update_from_udp(self, udp_packet):
-        base_packet = udp_defs.PacketBase.from_buffer_copy(udp_packet)
-        if base_packet.packet_type == udp_defs.TelemetryData.PACKET_TYPE:
-            self._assert_packet_version(udp_defs.TelemetryData, base_packet.packet_version)
-            self._vehicle_data.update_from_udp(udp_packet)
+        packet_base = udp_defs.PacketBase.from_buffer_copy(udp_packet)
+        success = False
+        for data_type in self._data:
+            try:
+                data_type._update_from_udp(packet_base, udp_packet)
+                break
+            except PacketTypeError:
+                pass
+        if not success:
+            raise PacketTypeError(f'unrecognised packet type {packet_base.packet_type}')
 
     @property
     def vehicle(self):
@@ -43,13 +69,21 @@ class _BaseData:
     def __init__(self):
         self._last_udp_packet = None
 
-    def _udp_packet_property(self, property):
-        if self._last_udp_packet is None:
-            raise ValueError('UDP packet data not available')
-        return getattr(self._udp_struct.from_buffer_copy(self._last_udp_packet), property)
-
-    def update_from_udp(self, udp_packet):
+    def _update_from_udp(self, packet_base, udp_packet):
+        if packet_base.packet_type != self._udp_struct.PACKET_TYPE:
+            raise PacketTypeError(
+                f'expected packet type {self._udp_struct.PACKET_TYPE}, got {packet_base.packet_type}')
         self._last_udp_packet = udp_packet
+
+    def _udp_packet_property(self, property, cast=None):
+        if self._last_udp_packet is None:
+            return None
+        value = getattr(self._udp_struct.from_buffer_copy(self._last_udp_packet), property)
+        if value is None:
+            return None
+        if cast is None:
+            return value
+        return cast(value)
 
     @property
     def packet_number(self):
@@ -73,8 +107,66 @@ class _VehicleData(_BaseData):
 
     @property
     def speed(self):
-        return self._last_udp_packet('speed')
+        return self._udp_packet_property('speed')
 
     @property
     def rpm(self):
-        return self._last_udp_packet('rpm')
+        return self._udp_packet_property('rpm')
+
+
+class _RaceData(_BaseData):
+    _udp_struct = udp_defs.RaceData
+
+    @property
+    def track_location(self):
+        val = self._udp_packet_property('track_location')
+        if val:
+            return bytes(val).decode('utf-8')
+
+
+class _ParticipantsData(_BaseData):
+    _udp_struct = udp_defs.ParticipantsData
+
+    @property
+    def name(self):
+        val = self._udp_packet_property('name')
+        if val:
+            return bytes(val).decode('utf-8')
+
+
+class _TimingsData(_BaseData):
+    _udp_struct = udp_defs.TimingsData
+
+    @property
+    def participant_count(self):
+        val = self._udp_packet_property('num_participants')
+        if val:
+            return int.from_bytes(val, byteorder='little')
+
+
+class _GameStateData(_BaseData):
+    _udp_struct = udp_defs.GameStateData
+
+    @property
+    def track_temperature(self):
+        val = self._udp_packet_property('track_temperature')
+        if val:
+            return int.from_bytes(val, byteorder='little')
+
+
+class _TimeStatsData(_BaseData):
+    _udp_struct = udp_defs.TimeStatsData
+
+    @property
+    def stats(self):
+        return self._udp_packet_property('stats')
+
+
+class _ParticipantVehicleNamesData(_BaseData):
+    _udp_struct = udp_defs.ParticipantVehicleNamesData
+
+    @property
+    def vehicles(self):
+        val = self._udp_packet_property('vehicles')
+        if val:
+            return val[0].name
