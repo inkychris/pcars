@@ -13,6 +13,7 @@ CLASS_NAME_LENGTH_MAX = 20
 VEHICLES_PER_PACKET = 16
 CLASSES_SUPPORTED_PER_PACKET = 60
 
+
 class StreamerPacketHandlerType(enum.Enum):
     CAR_PHYSICS = 0,
     RACE_DEFINITION = 1,
@@ -25,7 +26,11 @@ class StreamerPacketHandlerType(enum.Enum):
     PARTICIPANTS_VEHICLE_NAMES = 8
 
 
-class PacketBase(ctypes.Structure):
+class PackedStructure(ctypes.Structure):
+    _pack_ = 1
+
+
+class PacketBase(PackedStructure):
     _fields_ = [
         ('packet_number', ctypes.c_uint),
         ('category_packet_number', ctypes.c_uint),
@@ -36,17 +41,15 @@ class PacketBase(ctypes.Structure):
     ]
 
 
-_packet_base = [
-    ('packet_size', ctypes.c_uint),
-    ('packet_base', PacketBase),
-]
+_packet_base = ('packet_base', PacketBase)
 
 
-class TelemetryData(ctypes.Structure):
-    VERSION = 2
+class TelemetryData(PackedStructure):
+    PACKET_TYPE = 0
+    VERSION = 4
 
     _fields_ = [
-        *_packet_base,
+        _packet_base,
         ('viewed_participant_index', ctypes.c_char),
         ('unfiltered_throttle', ctypes.c_ubyte),
         ('unfiltered_brake', ctypes.c_ubyte),
@@ -118,11 +121,12 @@ class TelemetryData(ctypes.Structure):
     ]
 
 
-class RaceData(ctypes.Structure):
+class RaceData(PackedStructure):
+    PACKET_TYPE = 1
     VERSION = 1
 
     _fields_ = [
-        *_packet_base,
+        _packet_base,
         ('world_fastest_lap_time', ctypes.c_float),
         ('personal_fastest_lap_time', ctypes.c_float),
         ('personal_fastest_sector1_time', ctypes.c_float),
@@ -141,10 +145,12 @@ class RaceData(ctypes.Structure):
     ]
 
 
-class ParticipantsData(ctypes.Structure):
+class ParticipantsData(PackedStructure):
+    PACKET_TYPE = 2
     VERSION = 2
 
     _fields_ = [
+        _packet_base,
         ('participants_changed_timestamp', ctypes.c_uint),
         ('name', (ctypes.c_char * PARTICIPANT_NAME_LENGTH_MAX) * PARTICIPANTS_PER_PACKET),
         ('nationality', ctypes.c_uint * PARTICIPANTS_PER_PACKET),
@@ -152,7 +158,7 @@ class ParticipantsData(ctypes.Structure):
     ]
 
 
-class ParticipantsInfo(ctypes.Structure):
+class ParticipantsInfo(PackedStructure):
     VERSION = 3
 
     _fields_ = [
@@ -173,11 +179,12 @@ class ParticipantsInfo(ctypes.Structure):
     ]
 
 
-class TimingsData(ctypes.Structure):
+class TimingsData(PackedStructure):
+    PACKET_TYPE = 3
     VERSION = 2
 
     _fields_ = [
-        *_packet_base,
+        _packet_base,
         ('num_participants', ctypes.c_char),
         ('participants_changed_timestamp', ctypes.c_uint),
         ('event_time_remaining', ctypes.c_float),
@@ -186,15 +193,16 @@ class TimingsData(ctypes.Structure):
         ('split_time', ctypes.c_float),
         ('partcipants', ParticipantsInfo * STREAMER_PARTICIPANTS_SUPPORTED),
         ('local_participant_index', ctypes.c_ushort),
-        ('tick_count;', ctypes.c_uint),
+        ('tick_count', ctypes.c_uint),
     ]
 
 
-class GameStateData(ctypes.Structure):
+class GameStateData(PackedStructure):
+    PACKET_TYPE = 4
     VERSION = 2
 
     _fields_ = [
-        *_packet_base,
+        _packet_base,
         ('build_version_number', ctypes.c_ushort),
         ('game_state', ctypes.c_char),
         ('ambient_temperature', ctypes.c_char),
@@ -207,7 +215,7 @@ class GameStateData(ctypes.Structure):
     ]
 
 
-class ParticipantStatsInfo(ctypes.Structure):
+class ParticipantStatsInfo(PackedStructure):
     VERSION = 2
 
     _fields_ = [
@@ -222,7 +230,7 @@ class ParticipantStatsInfo(ctypes.Structure):
     ]
 
 
-class ParticipantsStats(ctypes.Structure):
+class ParticipantsStats(PackedStructure):
     VERSION = 2
 
     _fields_ = [
@@ -230,17 +238,18 @@ class ParticipantsStats(ctypes.Structure):
     ]
 
 
-class TimeStatsData(ctypes.Structure):
+class TimeStatsData(PackedStructure):
+    PACKET_TYPE = 7
     VERSION = 2
 
     _fields_ = [
-        *_packet_base,
+        _packet_base,
         ('participants_changed_timestamp', ctypes.c_uint),
         ('stats', ParticipantsStats),
     ]
 
 
-class VehicleInfo(ctypes.Structure):
+class VehicleInfo(PackedStructure):
     VERSION = 2
 
     _fields_ = [
@@ -250,16 +259,16 @@ class VehicleInfo(ctypes.Structure):
     ]
 
 
-class ParticipantVehicleNamesData(ctypes.Structure):
+class ParticipantVehicleNamesData(PackedStructure):
     VERSION = 2
 
     _fields_ = [
-        *_packet_base,
+        _packet_base,
         ('vehicles', VehicleInfo * VEHICLES_PER_PACKET),
     ]
 
 
-class ClassInfo(ctypes.Structure):
+class ClassInfo(PackedStructure):
     VERSION = 2
 
     _fields_ = [
@@ -268,10 +277,10 @@ class ClassInfo(ctypes.Structure):
     ]
 
 
-class VehicleClassNamesData(ctypes.Structure):
+class VehicleClassNamesData(PackedStructure):
     VERSION = 2
 
     _fields_ = [
-        *_packet_base,
+        _packet_base,
         ('classes', ClassInfo * CLASSES_SUPPORTED_PER_PACKET),
     ]
